@@ -7,14 +7,18 @@ import {
   Animated,
   Easing,
   Alert,
+  AlertButton,
 } from "react-native";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { useBle } from "./BleProvider";
 
 export default function BleStatusIndicator() {
-  const { status, connect, disconnect, device } = useBle();
+  const { status, bluetoothOn, connect, disconnect, device } = useBle();
   const pulse = useRef(new Animated.Value(0.6)).current;
 
+  /* =========================
+     PULSE ANIMATION
+  ========================= */
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -34,30 +38,75 @@ export default function BleStatusIndicator() {
     ).start();
   }, []);
 
+  /* =========================
+     DERIVED UI STATE
+  ========================= */
+  const effectiveStatus =
+    !bluetoothOn ? "bluetooth-off" : status;
+
   const color =
-    status === "connected"
+    effectiveStatus === "connected"
       ? "#22c55e"
-      : status === "connecting"
+      : effectiveStatus === "connecting"
       ? "#facc15"
       : "#ef4444";
 
+  const label =
+    effectiveStatus === "connected"
+      ? "Connected"
+      : effectiveStatus === "connecting"
+      ? "Connecting…"
+      : effectiveStatus === "bluetooth-off"
+      ? "Turn on Bluetooth"
+      : "Tap to connect";
+
+  /* =========================
+     INTERACTIONS
+  ========================= */
+  const onPress = () => {
+    if (!bluetoothOn) {
+      Alert.alert(
+        "Bluetooth is Off",
+        "Please turn on Bluetooth to connect to the ESP32."
+      );
+      return;
+    }
+
+    if (status === "disconnected") {
+      connect(); // 🔁 retry scan / reconnect
+    }
+  };
+
   const onLongPress = () => {
+    const buttons: AlertButton[] = [];
+
+    if (status === "connected") {
+      buttons.push({
+        text: "Disconnect",
+        onPress: disconnect,
+        style: "destructive",
+      });
+    }
+
+    buttons.push({ text: "Close", style: "cancel" });
+
     Alert.alert(
       "BLE Details",
-      `Status: ${status}\nDevice: ${device?.name ?? "None"}\nID: ${
-        device?.id ?? "—"
-      }`,
-      [
-        { text: "Disconnect", onPress: disconnect, style: "destructive" },
-        { text: "Close" },
-      ]
+      `Bluetooth: ${bluetoothOn ? "ON" : "OFF"}
+Status: ${status}
+Device: ${device?.name ?? "None"}
+ID: ${device?.id ?? "—"}`,
+      buttons
     );
   };
 
+  /* =========================
+     RENDER
+  ========================= */
   return (
     <TouchableOpacity
       activeOpacity={0.85}
-      onPress={connect}
+      onPress={onPress}
       onLongPress={onLongPress}
       style={styles.wrapper}
     >
@@ -68,19 +117,22 @@ export default function BleStatusIndicator() {
             { backgroundColor: color, transform: [{ scale: pulse }] },
           ]}
         />
-        <FontAwesome5 name="bluetooth-b" size={14} color="#60a5fa" />
-        <Text style={styles.text}>
-          {status === "connected"
-            ? "Connected"
-            : status === "connecting"
-            ? "Connecting"
-            : "Tap to reconnect"}
-        </Text>
+        <FontAwesome5
+          name="bluetooth-b"
+          size={14}
+          color={bluetoothOn ? "#60a5fa" : "#94a3b8"}
+        />
+        <Text style={styles.text}>{label}</Text>
       </View>
+
+      
     </TouchableOpacity>
   );
 }
 
+/* =========================
+   STYLES
+========================= */
 const styles = StyleSheet.create({
   wrapper: {
     alignItems: "center",
@@ -90,10 +142,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#0f172a",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 999,
-    gap: 6,
+    gap: 8,
+    elevation: 4,
   },
   dot: {
     width: 8,
@@ -104,5 +157,6 @@ const styles = StyleSheet.create({
     color: "#e5e7eb",
     fontSize: 12,
     fontWeight: "600",
+    letterSpacing: 0.3,
   },
 });

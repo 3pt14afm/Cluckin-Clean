@@ -4,8 +4,9 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useRef,
 } from "react";
-import { BleManager, Device } from "react-native-ble-plx";
+import { BleManager, Device, State } from "react-native-ble-plx";
 
 const ESP32_NAME = "ESP32-SCHEDULER";
 
@@ -14,24 +15,45 @@ type BleStatus = "disconnected" | "connecting" | "connected";
 type BleContextType = {
   status: BleStatus;
   device: Device | null;
+  bluetoothOn: boolean;
   connect: () => void;
   disconnect: () => void;
 };
 
 const BleContext = createContext<BleContextType | null>(null);
 
-// ✅ One manager for the whole app
+// ✅ Single BLE manager for whole app
 const manager = new BleManager();
 
 export function BleProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<BleStatus>("disconnected");
   const [device, setDevice] = useState<Device | null>(null);
+  const [bluetoothOn, setBluetoothOn] = useState(false);
+
+  const hasAutoConnected = useRef(false);
 
   /* =========================
-     CONNECT (STABLE)
+     BLUETOOTH STATE LISTENER
+  ========================= */
+  useEffect(() => {
+    const sub = manager.onStateChange((state) => {
+      setBluetoothOn(state === State.PoweredOn);
+
+      if (state !== State.PoweredOn) {
+        setStatus("disconnected");
+        setDevice(null);
+      }
+    }, true);
+
+    return () => sub.remove();
+  }, []);
+
+  /* =========================
+     CONNECT
   ========================= */
   const connect = useCallback(() => {
-    if (status === "connecting" || status === "connected") return;
+    if (!bluetoothOn) return;
+    if (status !== "disconnected") return;
 
     setStatus("connecting");
 
@@ -60,7 +82,13 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
         }
       }
     });
-  }, [status]);
+
+    // ⏱️ Safety timeout (stop scanning after 10s)
+    setTimeout(() => {
+      manager.stopDeviceScan();
+      setStatus((s) => (s === "connecting" ? "disconnected" : s));
+    }, 10000);
+  }, [bluetoothOn, status]);
 
   /* =========================
      DISCONNECT
@@ -68,27 +96,43 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
   const disconnect = useCallback(() => {
     if (device) {
       device.cancelConnection();
-      setDevice(null);
     }
+    setDevice(null);
     setStatus("disconnected");
   }, [device]);
 
   /* =========================
-     AUTO-CONNECT ON APP START
+     AUTO-CONNECT (ONCE)
   ========================= */
   useEffect(() => {
-    connect();
+    if (bluetoothOn && !hasAutoConnected.current) {
+      hasAutoConnected.current = true;
+      connect();
+    }
+  }, [bluetoothOn, connect]);
 
+  /* =========================
+     CLEANUP
+  ========================= */
+  useEffect(() => {
     return () => {
       manager.stopDeviceScan();
       if (device) {
         device.cancelConnection();
       }
     };
-  }, [connect, device]);
+  }, [device]);
 
   return (
-    <BleContext.Provider value={{ status, device, connect, disconnect }}>
+    <BleContext.Provider
+      value={{
+        status,
+        device,
+        bluetoothOn,
+        connect,
+        disconnect,
+      }}
+    >
       {children}
     </BleContext.Provider>
   );

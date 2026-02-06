@@ -22,6 +22,7 @@ import StatusCard from "@/components/ui/StatusCard";
 
 /* 🔵 GLOBAL BLE */
 import { useBle } from "@/app/ble/BleProvider";
+import BleStatusIndicator from "../ble/BleStatusIndicator";
 
 export default function Monitoring() {
   const { fontScale } = useWindowDimensions();
@@ -132,36 +133,7 @@ export default function Monitoring() {
           paddingBottom: Platform.OS === "ios" ? 100 : 30,
         }}
       >
-        {/* 🔵 BLE STATUS INDICATOR */}
-        <View style={styles.bleWrapper}>
-          <Pressable
-            style={styles.bleCard}
-            onPress={() => bleStatus === "disconnected" && connect()}
-          >
-            <Animated.View
-              style={[
-                styles.pulseDot,
-                {
-                  backgroundColor: statusColor,
-                  transform: [{ scale: pulseAnim }],
-                },
-              ]}
-            />
-            <FontAwesome5
-              name="bluetooth-b"
-              size={14}
-              color="#60a5fa"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.bleText}>
-              {bleStatus === "connected"
-                ? "ESP32 Connected"
-                : bleStatus === "connecting"
-                ? "Connecting…"
-                : "Disconnected — Tap to reconnect"}
-            </Text>
-          </Pressable>
-        </View>
+       
 
         {/* ⚠️ DISCONNECTED WARNING */}
         {!isConnected && (

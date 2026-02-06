@@ -5,18 +5,34 @@ import {
   ScrollView,
   useWindowDimensions,
   Pressable,
+  SafeAreaView,
 } from "react-native";
-import StatusCard from "@/components/ui/StatusCard";
 import { LineChart } from "react-native-chart-kit";
+import { Feather } from "@expo/vector-icons"; // Assuming Expo, or use your icon set
 
 /* 🔵 GLOBAL BLE */
 import { useBle } from "@/app/ble/BleProvider";
 import BleStatusIndicator from "@/app/ble/BleStatusIndicator";
 
+// Custom Card Component for consistency
+const GlassCard = ({ children, style }: any) => (
+  <View 
+    style={[{
+      backgroundColor: 'rgba(30, 41, 59, 0.7)',
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.05)',
+      marginBottom: 16,
+    }, style]}
+  >
+    {children}
+  </View>
+);
+
 export default function Dashboard() {
   const { fontScale, width } = useWindowDimensions();
   const { status: bleStatus } = useBle();
-
   const [speed, setSpeed] = useState(75);
 
   const increaseSpeed = () => {
@@ -32,188 +48,139 @@ export default function Dashboard() {
   const controlsDisabled = bleStatus !== "connected";
 
   return (
-    <ScrollView
-      className="px-5"
-      style={{ height: "100%" }}
-      contentContainerStyle={{ paddingVertical: 20, gap: 10 }}
-    >
-      {/* GLOBAL BLE STATUS */}
-      <BleStatusIndicator />
-
-      {/* Header */}
-      <Text
-        className="font-bold text-black"
-        style={{ fontSize: 24 * fontScale }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0f172a" }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
       >
-        Smart Cleaning System Dashboard
-      </Text>
-      <Text className="text-gray-400 mb-3" style={{ fontSize: 12 * fontScale }}>
-        Real-Time Operational Metrics
-      </Text>
-
-      {/* System Status */}
-      <StatusCard className="bg-[#1b2735] p-4 rounded-xl">
-        <Text
-          className="text-gray-300 mb-2"
-          style={{ fontSize: 12 * fontScale }}
-        >
-          SYSTEM STATUS
-        </Text>
-        <View className="flex-row items-center justify-between">
-          <Text
-            className={`font-bold ${
-              bleStatus === "connected"
-                ? "text-green-400"
-                : bleStatus === "connecting"
-                ? "text-yellow-400"
-                : "text-red-400"
-            }`}
-            style={{ fontSize: 22 * fontScale }}
-          >
-            {bleStatus === "connected"
-              ? "OPERATIONAL"
-              : bleStatus === "connecting"
-              ? "CONNECTING"
-              : "OFFLINE"}
-          </Text>
-          <View
-            className={`w-3 h-3 rounded-full ${
-              bleStatus === "connected"
-                ? "bg-green-500"
-                : bleStatus === "connecting"
-                ? "bg-yellow-400"
-                : "bg-red-500"
-            }`}
-          />
-        </View>
-      </StatusCard>
-
-      {/* Cleaning Speed Control */}
-      <StatusCard className="bg-[#1b2735] p-4 rounded-xl">
-        <Text
-          className="text-gray-300 mb-2"
-          style={{ fontSize: 12 * fontScale }}
-        >
-          CLEANING SPEED CONTROL
-        </Text>
-
-        <View className="flex-row items-center justify-between mb-2">
-          <Pressable
-            onPress={decreaseSpeed}
-            disabled={controlsDisabled}
-            className={`w-10 h-10 rounded-full items-center justify-center ${
-              controlsDisabled ? "bg-gray-600" : "bg-[#243447]"
-            }`}
-          >
-            <Text className="text-white text-lg font-bold">–</Text>
-          </Pressable>
-
-          <Text
-            className={`font-bold ${
-              controlsDisabled ? "text-gray-500" : "text-blue-400"
-            }`}
-            style={{ fontSize: 22 * fontScale }}
-          >
-            {speed}%
-          </Text>
-
-          <Pressable
-            onPress={increaseSpeed}
-            disabled={controlsDisabled}
-            className={`w-10 h-10 rounded-full items-center justify-center ${
-              controlsDisabled ? "bg-gray-600" : "bg-[#243447]"
-            }`}
-          >
-            <Text className="text-white text-lg font-bold">+</Text>
-          </Pressable>
-        </View>
-
-        <View className="w-full h-2 bg-[#334155] rounded-full overflow-hidden mt-1">
-          <View
-            style={{
-              width: `${speed}%`,
-              height: "100%",
-              backgroundColor: controlsDisabled ? "#6b7280" : "#3b82f6",
-            }}
-          />
-        </View>
-
-        <View className="flex-row justify-between mt-1">
-          <Text className="text-gray-500 text-xs">Slow (0%)</Text>
-          <Text className="text-gray-500 text-xs">Max (100%)</Text>
-        </View>
-      </StatusCard>
-
-      {/* Waste Level Monitoring */}
-      <StatusCard className="bg-[#1b2735] p-4 rounded-xl">
-        <Text
-          className="text-gray-300 mb-2"
-          style={{ fontSize: 12 * fontScale }}
-        >
-          WASTE LEVEL MONITORING (0–100%)
-        </Text>
-
-        <LineChart
-          data={{
-            labels: ["10.00", "10.15", "10.30"],
-            datasets: [
-              {
-                data: [20, 60, 45, 60],
-                color: (o = 1) => `rgba(59,130,246,${o})`,
-                strokeWidth: 2,
-              },
-              {
-                data: [30, 55, 70, 100],
-                color: (o = 1) => `rgba(239,68,68,${o})`,
-                strokeWidth: 2,
-              },
-            ],
-          }}
-          width={width - 60}
-          height={180}
-          yAxisSuffix="%"
-          chartConfig={{
-            backgroundColor: "#1b2735",
-            backgroundGradientFrom: "#1b2735",
-            backgroundGradientTo: "#1b2735",
-            color: () => "#3b82f6",
-            labelColor: () => "#9ca3af",
-            propsForDots: {
-              r: "4",
-              strokeWidth: "2",
-              stroke: "#1e40af",
-            },
-          }}
-          bezier
-          style={{ borderRadius: 10 }}
-        />
-
-        <Text className="text-blue-400 mt-2 text-sm">Power: 32.5W</Text>
-      </StatusCard>
-
-      {/* Cleaning History */}
-      <StatusCard className="bg-[#1b2735] p-4 rounded-xl">
-        <Text
-          className="text-gray-300 mb-2"
-          style={{ fontSize: 12 * fontScale }}
-        >
-          CLEANING HISTORY
-        </Text>
-        <View className="bg-[#243447] rounded-lg p-3">
-          <Text className="text-white">Previous Cleaning Cycles</Text>
-          <View className="mt-2">
-            <Text className="text-gray-400 text-xs">
-              2023-10-26 — 1hr 30m
+        {/* Header Section */}
+        <View style={{ marginTop: 20, marginBottom: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={{ fontSize: 28 * fontScale, fontWeight: "800", color: "#f8fafc" }}>
+              Dashboard
             </Text>
-            <Text className="text-gray-400 text-xs">
-              Duration: 45m — 85% → 78%
-            </Text>
-            <Text className="text-gray-400 text-xs">
-              Avg Speed Remove: 2hr 15m — 40% → 98%
+            <Text style={{ fontSize: 14 * fontScale, color: "#94a3b8", marginTop: 4 }}>
+              Smart Cleaning System
             </Text>
           </View>
+          <BleStatusIndicator />
         </View>
-      </StatusCard>
-    </ScrollView>
+
+        {/* System Status - Mini Glass Pill */}
+        <View style={{ 
+          flexDirection: 'row', 
+          backgroundColor: bleStatus === "connected" ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+          padding: 12, 
+          borderRadius: 16, 
+          alignItems: 'center',
+          marginBottom: 20,
+          borderWidth: 1,
+          borderColor: bleStatus === "connected" ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+        }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: bleStatus === "connected" ? "#22c55e" : "#ef4444", marginRight: 10 }} />
+          <Text style={{ color: bleStatus === "connected" ? "#4ade80" : "#f87171", fontWeight: "600", fontSize: 13 }}>
+            SYSTEM {bleStatus === "connected" ? "OPERATIONAL" : bleStatus.toUpperCase()}
+          </Text>
+        </View>
+
+        {/* Speed Control Section */}
+        <GlassCard>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <Text style={{ color: "#cbd5e1", fontSize: 14, fontWeight: "600" }}>CLEANING SPEED</Text>
+            <View style={{ backgroundColor: "#3b82f6", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+              <Text style={{ color: "white", fontWeight: "bold" }}>{speed}%</Text>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Pressable
+              onPress={decreaseSpeed}
+              disabled={controlsDisabled}
+              style={({ pressed }) => ({
+                width: 54, height: 54, borderRadius: 18, backgroundColor: "#1e293b", 
+                alignItems: "center", justifyContent: "center", opacity: pressed || controlsDisabled ? 0.6 : 1,
+                borderWidth: 1, borderColor: "#334155"
+              })}
+            >
+              <Feather name="minus" size={24} color="#f8fafc" />
+            </Pressable>
+
+            {/* Modern Progress Bar */}
+            <View style={{ flex: 1, height: 8, backgroundColor: "#334155", borderRadius: 4, marginLeft: 20, marginRight:30, marginHorizontal: 20, overflow: 'hidden' }}>
+              <View style={{ width: `${speed}%`, height: '100%', backgroundColor: "#3b82f6" }} />
+            </View>
+
+            <Pressable
+              onPress={increaseSpeed}
+              disabled={controlsDisabled}
+              style={({ pressed }) => ({
+                width: 54, height: 54, borderRadius: 18, backgroundColor: "#3b82f6", 
+                alignItems: "center", justifyContent: "center", opacity: pressed || controlsDisabled ? 0.6 : 1,
+                shadowColor: "#3b82f6", shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }
+              })}
+            >
+              <Feather name="plus" size={24} color="white" />
+            </Pressable>
+          </View>
+        </GlassCard>
+
+        {/* Metrics Chart */}
+        <GlassCard>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+            <Text style={{ color: "#cbd5e1", fontSize: 14, fontWeight: "600" }}>WASTE LEVEL</Text>
+            <Text style={{ color: "#3b82f6", fontWeight: "700" }}>32.5W Power</Text>
+          </View>
+          
+          <LineChart
+            data={{
+              labels: ["10:00", "10:15", "10:30", "10:45"],
+              datasets: [
+                { data: [20, 60, 45, 60], color: (o = 1) => `rgba(59, 130, 246, ${o})`, strokeWidth: 3 },
+                { data: [30, 55, 70, 90], color: (o = 1) => `rgba(248, 113, 113, ${o})`, strokeWidth: 3 }
+              ],
+            }}
+            width={width - 80}
+            height={160}
+            chartConfig={{
+              backgroundGradientFrom: "#1e293b",
+              backgroundGradientTo: "#1e293b",
+              decimalPlaces: 0,
+              color: (o = 1) => `rgba(255, 255, 255, ${o})`,
+              labelColor: (o = 1) => `rgba(148, 163, 184, ${o})`,
+              style: { borderRadius: 16 },
+              propsForDots: { r: "0" }, // Hide dots for a cleaner look
+            }}
+            bezier
+            style={{ marginVertical: 8, borderRadius: 16, marginLeft: -20 }}
+          />
+        </GlassCard>
+
+        {/* History List */}
+        <Text style={{ color: "#f8fafc", fontSize: 18, fontWeight: "700", marginBottom: 12, marginTop: 8 }}>
+          Recent Activity
+        </Text>
+        {[
+          { date: "Oct 26", time: "1h 30m", desc: "Deep Clean Cycle", level: "85% → 78%" },
+          { date: "Oct 25", time: "45m", desc: "Standard Brush", level: "40% → 98%" }
+        ].map((item, idx) => (
+          <View key={idx} style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            backgroundColor: '#1e293b', 
+            padding: 16, 
+            borderRadius: 16, 
+            marginBottom: 10,
+            borderLeftWidth: 4,
+            borderLeftColor: idx === 0 ? '#3b82f6' : '#94a3b8'
+          }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#f8fafc", fontWeight: "600" }}>{item.desc}</Text>
+              <Text style={{ color: "#94a3b8", fontSize: 12 }}>{item.date} • {item.level}</Text>
+            </View>
+            <Text style={{ color: "#cbd5e1", fontWeight: "bold" }}>{item.time}</Text>
+          </View>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
